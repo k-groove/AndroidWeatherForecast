@@ -1,0 +1,170 @@
+import android.os.Bundle;
+import android.app.Activity;
+import android.app.AlertDialog;
+import android.view.LayoutInflater;
+import android.view.Menu;
+import android.graphics.Paint;
+import android.os.AsyncTask;
+import android.view.View;
+import android.widget.Button;
+import android.widget.EditText;
+import android.widget.LinearLayout;
+import android.widget.TextView;
+import android.widget.Toast;
+import weather.Weather;
+
+public class WeatherForecastActivity extends Activity {
+
+    private TextView txtHeading;
+    private TextView txtForeCast;
+    private Button infoBtn;
+    private Button anotherZipBtn;
+    private LinearLayout weatherView;
+    
+    private String zipCodeStr = "30144";
+    private String zipCodeErrStr = "";
+    private String searchingStr = "";
+    private String lessInfoStr = "";
+    private String moreInfoStr = "";
+    private String forecastStr = "";
+    private String findStr = "";
+    
+    private boolean allInfo = true;
+    
+    private Weather weather;
+    private EditText txtZipCode;
+    private AlertDialog alertDialog;
+    
+    @Override
+    protected void onCreate(Bundle savedInstanceState) {
+        super.onCreate(savedInstanceState);
+        setContentView(R.layout.activity_weather_forecast);
+
+        weatherView = (LinearLayout) findViewById(R.id.weatherView);
+        
+        // The heading text view
+        txtHeading = (TextView) findViewById(R.id.textviewHead);
+        txtHeading.setPaintFlags(txtHeading.getPaintFlags() | Paint.UNDERLINE_TEXT_FLAG);
+
+        // The text view where the forecast goes
+        txtForeCast = (TextView) findViewById(R.id.textviewForecast);
+        
+        searchingStr = getString(R.string.searching);
+        lessInfoStr = getString(R.string.lessinfo);
+        moreInfoStr = getString(R.string.moreinfo);
+        findStr = getString(R.string.stringtofind);
+        zipCodeErrStr = getString(R.string.zipcodeerror);
+        
+        anotherZipBtn = (Button) findViewById(R.id.AnotherZipCodeButton);
+        anotherZipBtn.setOnClickListener(new View.OnClickListener(){
+			public void onClick(View v) {
+				getZipCode();
+				weatherView.invalidate();
+			
+				
+		       
+			}        	
+        });
+        
+        infoBtn = (Button) findViewById(R.id.infoButton);
+        infoBtn.setOnClickListener(new View.OnClickListener() {
+            public void onClick(View v) {
+                allInfo = !allInfo;
+                if (allInfo)
+                    txtForeCast.setText("\n" + forecastStr + "\n");
+                else if (findStr.length() > 0) {
+                    int pos = forecastStr.indexOf(findStr);
+                    if (pos > 0)
+                        txtForeCast.setText("\n" + 
+                                 forecastStr.substring(0,pos) + "\n");
+                }
+                infoBtn.setText((allInfo) ? lessInfoStr : moreInfoStr);
+                weatherView.invalidate();
+            }
+        });
+
+        txtForeCast.setText("\n" + searchingStr + "\n");
+        new GetWeather().execute();
+    }
+    
+    // This asynchronous task calls the Weather library which accesses the
+    // internet.  When the call is finished the onPostExecute method is
+    // called with the result.
+    private class GetWeather extends AsyncTask<Void, Void, String> {
+       @Override
+       protected String doInBackground(Void... params) {
+          weather = new Weather(zipCodeStr);    // start the session
+          return weather.getForcast();          // return result
+       }
+
+       @Override
+       protected void onPostExecute(String result) {
+          if (result == null || result.equals("")) 
+              Toast.makeText(getApplicationContext(),
+                      zipCodeErrStr,Toast.LENGTH_LONG).show();
+          else {
+              txtForeCast.setText("\n" + result + "\n");
+              forecastStr = result;
+          }
+       }
+    }
+
+    @Override
+    public boolean onCreateOptionsMenu(Menu menu) {
+        // Inflate the menu; this adds items to the action bar if it is present.
+        getMenuInflater().inflate(R.menu.weather_forecast, menu);
+        return true;
+    }
+    
+ // Creates a dialog box that gets the zipCode
+    public void getZipCode() {
+        // inflate layout in layout folder called "zipcodedlg"
+        LayoutInflater li = LayoutInflater.from(this);
+        View zipcodedlgView = li.inflate(R.layout.zipcodedlg, null);
+
+        // instantiate the AlertDialog
+        AlertDialog.Builder alertDialogBuilder =
+                                  new AlertDialog.Builder(this);
+        alertDialogBuilder.setView(zipcodedlgView).
+                                  setCancelable(false);
+
+        // set the editText field with the previous zipCodeStr used
+        txtZipCode = (EditText)
+    zipcodedlgView.findViewById(R.id.editTextDialogZipCode);
+        txtZipCode.setText(zipCodeStr);
+
+        // create the OK Button
+        Button btnOK = (Button) zipcodedlgView.
+                                        findViewById(R.id.okButton);
+        btnOK.setOnClickListener(new View.OnClickListener() {
+            @Override
+            public void onClick(View v) {
+                String zipStr = txtZipCode.getText().toString().
+                                                           trim();
+                if (zipStr.length() == 0) {  // if empty, show error
+                    Toast.makeText(getApplicationContext(),
+                                getString(R.string.zipcodereqtext),
+                                Toast.LENGTH_LONG).show();
+                } else  {  // if not empty, save it and end dialog
+                    zipCodeStr = zipStr;
+                    alertDialog.dismiss();
+                   
+                }
+            }
+        });
+        // create the Cancel Button
+        Button btnCancel = (Button)
+                  zipcodedlgView.findViewById(R.id.cancelButton);
+        btnCancel.setOnClickListener(new View.OnClickListener() {
+            @Override
+            public void onClick(View v) {
+                alertDialog.dismiss();
+            }
+        });
+        // create and then show the dialog
+        alertDialog = alertDialogBuilder.create();
+        alertDialog.show();
+    }
+
+
+}
